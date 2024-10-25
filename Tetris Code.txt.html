@@ -18,11 +18,6 @@
 </body>
 </html>
 
-const canvas = document.getElementById('tetris');
-const context = canvas.getContext('2d');
-const grid = 30; // Ukuran grid
-const columns = canvas.width / grid;
-const rows = canvas.height / grid;
 
 // Bentuk Tetris
 const shapes = [
@@ -135,10 +130,7 @@ function clearRows() {
 
 // Fungsi jatuh otomatis
 function dropPiece() {
-  if (!checkCollision(currentPiece, 0, 1)) {
-    currentPiece.y++;
-  } else {
-    mergePiece(currentPiece);
+  if (!checkCollision(currentPiece, 0, 1)) {currentPiece.y++;} else      	{mergePiece(currentPiece);
     clearRows();
     currentPiece = new Piece(shapes[Math.floor(Math.random() * shapes.length)]);
     if (checkCollision(currentPiece, 0, 0)) {
