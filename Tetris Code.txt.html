@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetris Game</title>
+  <style>
+    canvas {
+      background-color: #000;
+      display: block;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="tetris" width="300" height="600"></canvas>
+  <script src="tetris.js"></script>
+</body>
+</html>
+
+const canvas = document.getElementById('tetris');
+const context = canvas.getContext('2d');
+const grid = 30; // Ukuran grid
+const columns = canvas.width / grid;
+const rows = canvas.height / grid;
+
+// Bentuk Tetris
+const shapes = [
+  [[1, 1, 1],
+   [0, 1, 0]],    // T Shape
+
+  [[0, 1, 1],
+   [1, 1, 0]],    // Z Shape
+
+  [[1, 1, 0],
+   [0, 1, 1]],    // S Shape
+
+  [[1, 1, 1, 1]],  // I Shape
+
+  [[1, 1],
+   [1, 1]],       // O Shape
+
+  [[1, 1, 1],
+   [1, 0, 0]],    // L Shape
+
+  [[1, 1, 1],
+   [0, 0, 1]]     // J Shape
+];
+
+// Warna untuk bentuk Tetris
+const colors = ['cyan', 'orange', 'red', 'green', 'blue', 'purple', 'yellow'];
+
+// Membuat class Piece
+class Piece {
+  constructor(shape) {
+    this.shape = shape;
+    this.color = colors[Math.floor(Math.random() * colors.length)];
+    this.x = Math.floor(columns / 2) - Math.floor(this.shape[0].length / 2);
+    this.y = 0;
+  }
+
+  // Memutar shape
+  rotate() {
+    this.shape = this.shape[0].map((_, i) => this.shape.map(row => row[i])).reverse();
+  }
+}
+
+// Inisialisasi grid
+const board = Array.from({ length: rows }, () => Array(columns).fill(0));
+
+let currentPiece = new Piece(shapes[Math.floor(Math.random() * shapes.length)]);
+let dropCounter = 0;
+let dropInterval = 1000; // Kecepatan jatuh awal
+let lastTime = 0;
+
+// Menggambar grid
+function drawBoard() {
+  board.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value) {
+        context.fillStyle = value;
+        context.fillRect(x * grid, y * grid, grid, grid);
+      }
+    });
+  });
+}
+
+// Menggambar shape
+function drawPiece(piece) {
+  piece.shape.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value) {
+        context.fillStyle = piece.color;
+        context.fillRect((piece.x + x) * grid, (piece.y + y) * grid, grid, grid);
+      }
+    });
+  });
+}
+
+// Memeriksa benturan
+function checkCollision(piece, offsetX = 0, offsetY = 0) {
+  return piece.shape.some((row, y) =>
+    row.some((value, x) => 
+      value &&
+      (board[piece.y + y + offsetY] &&
+       board[piece.y + y + offsetY][piece.x + x + offsetX]) !== 0
+    )
+  );
+}
+
+// Menambah piece ke board
+function mergePiece(piece) {
+  piece.shape.forEach((row, y) => {
+    row.forEach((value, x) => {
+      if (value) {
+        board[piece.y + y][piece.x + x] = piece.color;
+      }
+    });
+  });
+}
+
+// Menghapus baris penuh
+function clearRows() {
+  outer: for (let y = board.length - 1; y >= 0; --y) {
+    for (let x = 0; x < board[y].length; ++x) {
+      if (board[y][x] === 0) {
+        continue outer;
+      }
+    }
+    const row = board.splice(y, 1)[0].fill(0);
+    board.unshift(row);
+    ++y;
+  }
+}
+
+// Fungsi jatuh otomatis
+function dropPiece() {
+  if (!checkCollision(currentPiece, 0, 1)) {
+    currentPiece.y++;
+  } else {
+    mergePiece(currentPiece);
+    clearRows();
+    currentPiece = new Piece(shapes[Math.floor(Math.random() * shapes.length)]);
+    if (checkCollision(currentPiece, 0, 0)) {
+      board.forEach(row => row.fill(0)); // Reset game ketika game over
+    }
+  }
+  dropCounter = 0;
+}
+
+// Loop permainan
+function update(time = 0) {
+  const deltaTime = time - lastTime;
+  lastTime = time;
+  dropCounter += deltaTime;
+
+  if (dropCounter > dropInterval) {
+    dropPiece();
+  }
+
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  drawBoard();
+  drawPiece(currentPiece);
+
+  requestAnimationFrame(update);
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'ArrowLeft') {
+    if (!checkCollision(currentPiece, -1, 0)) {
+      currentPiece.x--;
+    }
+  } else if (event.key === 'ArrowRight') {
+    if (!checkCollision(currentPiece, 1, 0)) {
+      currentPiece.x++;
+    }
+  } else if (event.key === 'ArrowDown') {
+    dropPiece();
+  } else if (event.key === 'ArrowUp') {
+    const oldShape = currentPiece.shape;
+    currentPiece.rotate();
+    if (checkCollision(currentPiece)) {
+      currentPiece.shape = oldShape;
+    }
+  }
+});
+
+update();
